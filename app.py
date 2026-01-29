@@ -1,256 +1,166 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
-import os
-import sqlite3
-import pandas as pd
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 import matplotlib.pyplot as plt
-
-from flask import Flask, render_template, request, redirect, url_for
+import os
+import csv
 
 app = Flask(__name__)
-app.secret_key="expense_secret"
+app.secret_key = "expense_secret_key"
 
-# ---------- DATABASE CONNECTION ----------
-def get_db_connection():
-    conn = sqlite3.connect("expense.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'expenses.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+db = SQLAlchemy(app)
 
-# ---------- CREATE TABLE ----------
-def init_db():
-    conn = get_db_connection()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            amount REAL NOT NULL,
-            category TEXT NOT NULL,
-            note TEXT,
-            expense_date TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+# ======================
+# Database Model
+# ======================
+class Expense(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String(100), nullable=False)
+    note = db.Column(db.String(200))
+    expense_date = db.Column(db.Date, default=datetime.utcnow)
 
+# ======================
+# Create DB
+# ======================
+with app.app_context():
+    db.create_all()
 
-# ---------- GENERATE CHARTS ----------
-def generate_charts():
-    conn = get_db_connection()
-    df = pd.read_sql_query("SELECT * FROM expenses", conn)
-    conn.close()
+# ======================
+# Home / Dashboard
+# ======================
+@app.route('/')
+def index():
+    expenses = Expense.query.order_by(Expense.expense_date.desc()).all()
+    total = sum(e.amount for e in expenses)
 
-    if df.empty:
-        return
-
-    os.makedirs("static/charts", exist_ok=True)
-
-    # -------- PIE CHART (Category-wise) --------
-    category_sum = df.groupby("category")["amount"].sum()
-    plt.figure(figsize=(6, 6))
-    category_sum.plot.pie(autopct='%1.1f%%', startangle=140)
-    plt.title("Category-wise Expenses")
-    plt.ylabel("")
-    plt.tight_layout()
-    plt.savefig("static/charts/pie.png")
-    plt.close()
-
-    # -------- BAR CHART (Monthly) --------
-    df["month"] = pd.to_datetime(df["expense_date"]).dt.to_period("M").astype(str)
-    monthly_sum = df.groupby("month")["amount"].sum()
-    plt.figure(figsize=(7, 4))
-    monthly_sum.plot(kind="bar")
-    plt.title("Monthly Expenses")
-    plt.xlabel("Month")
-    plt.ylabel("Amount")
-    plt.tight_layout()
-    plt.savefig("static/charts/bar.png")
-    plt.close()
-
-    # -------- LINE CHART (Daily Trend) --------
-    daily_sum = df.groupby("expense_date")["amount"].sum()
-    plt.figure(figsize=(7, 4))
-    daily_sum.plot(marker="o")
-    plt.title("Spending Trend")
-    plt.xlabel("Date")
-    plt.ylabel("Amount")
-    plt.tight_layout()
-    plt.savefig("static/charts/line.png")
-    plt.close()
-
-
-# ---------- DASHBOARD ----------
-@app.route("/")
-def dashboard():
-    generate_charts()
-
-    conn = get_db_connection()
-    expenses = conn.execute(
-        "SELECT * FROM expenses ORDER BY expense_date DESC"
-    ).fetchall()
-    conn.close()
-
-    total = sum(exp["amount"] for exp in expenses)
+    generate_charts(expenses)
 
     return render_template(
-        "dashboard.html",
+        'dashboard.html',
         expenses=expenses,
         total=total
     )
 
-
-# ---------- ADD EXPENSE ----------
-@app.route("/add", methods=["GET", "POST"])
+# ======================
+# Add Expense
+# ======================
+@app.route('/add', methods=['GET', 'POST'])
 def add_expense():
-    
-    if request.method == "POST":
-        amount = request.form["amount"]
-        category = request.form["category"]
-        note = request.form.get("note", "")
-        expense_date = request.form["date"]
+    if request.method == 'POST':
+        amount = request.form['amount']
+        category = request.form['category']
+        note = request.form['note']
+        date = request.form['date']
 
-        conn = get_db_connection()
-        conn.execute(
-            "INSERT INTO expenses (amount, category, note, expense_date) VALUES (?, ?, ?, ?)",
-            (amount, category, note, expense_date)
+        new_expense = Expense(
+            amount=float(amount),
+            category=category,
+            note=note,
+            expense_date=datetime.strptime(date, '%Y-%m-%d')
         )
-        conn.commit()
-        conn.close()
 
-        return redirect(url_for("dashboard"))
+        db.session.add(new_expense)
+        db.session.commit()
 
-    return render_template("add_expense.html")
+        flash('Expense added successfully!', 'success')
+        return redirect(url_for('index'))
 
+    return render_template('add_expense.html')
 
-# ---------- RUN APP ----------
-if __name__ == "__main__":
-    init_db()
-    app.run(debug=True)
-import os
-import sqlite3
-import pandas as pd
-import matplotlib.pyplot as plt
+# ======================
+# Edit Expense
+# ======================
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit_expense(id):
+    expense = Expense.query.get_or_404(id)
 
-from flask import Flask, render_template, request, redirect, url_for, flash
+    if request.method == 'POST':
+        expense.amount = float(request.form['amount'])
+        expense.category = request.form['category']
+        expense.note = request.form['note']
+        expense.expense_date = datetime.strptime(request.form['date'], '%Y-%m-%d')
 
-app = Flask(__name__)
+        db.session.commit()
+        flash('Expense updated successfully!', 'info')
+        return redirect(url_for('index'))
 
-# ✅ REQUIRED FOR FLASH MESSAGES
-app.secret_key = "expense_secret"
+    return render_template('edit_expense.html', expense=expense)
 
+# ======================
+# Delete Expense (POST ONLY)
+# ======================
+@app.route('/delete/<int:id>', methods=['POST'])
+def delete_expense(id):
+    expense = Expense.query.get_or_404(id)
+    db.session.delete(expense)
+    db.session.commit()
 
-# ---------- DATABASE CONNECTION ----------
-def get_db_connection():
-    conn = sqlite3.connect("expense.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    flash('Expense deleted successfully!', 'danger')
+    return redirect(url_for('index'))
 
+# ======================
+# Generate Charts
+# ======================
+def generate_charts(expenses):
+    chart_dir = os.path.join(BASE_DIR, 'static', 'charts')
+    os.makedirs(chart_dir, exist_ok=True)
 
-# ---------- CREATE TABLE ----------
-def init_db():
-    conn = get_db_connection()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            amount REAL NOT NULL,
-            category TEXT NOT NULL,
-            note TEXT,
-            expense_date TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+    categories = {}
+    monthly = {}
 
+    for e in expenses:
+        categories[e.category] = categories.get(e.category, 0) + e.amount
+        month = e.expense_date.strftime('%b')
+        monthly[month] = monthly.get(month, 0) + e.amount
 
-# ---------- GENERATE CHARTS ----------
-def generate_charts():
-    conn = get_db_connection()
-    df = pd.read_sql_query("SELECT * FROM expenses", conn)
-    conn.close()
+    # Pie Chart
+    if categories:
+        plt.figure()
+        plt.pie(categories.values(), labels=categories.keys(), autopct='%1.1f%%')
+        plt.title('Category-wise Expenses')
+        plt.savefig(os.path.join(chart_dir, 'pie.png'))
+        plt.close()
 
-    if df.empty:
-        return
+    # Bar Chart
+    if monthly:
+        plt.figure()
+        plt.bar(monthly.keys(), monthly.values())
+        plt.title('Monthly Expenses')
+        plt.savefig(os.path.join(chart_dir, 'bar.png'))
+        plt.close()
 
-    os.makedirs("static/charts", exist_ok=True)
+    # Line Chart
+    if monthly:
+        plt.figure()
+        plt.plot(list(monthly.keys()), list(monthly.values()), marker='o')
+        plt.title('Expense Trend')
+        plt.savefig(os.path.join(chart_dir, 'line.png'))
+        plt.close()
 
-    # -------- PIE CHART (Category-wise) --------
-    category_sum = df.groupby("category")["amount"].sum()
-    plt.figure(figsize=(6, 6))
-    category_sum.plot.pie(autopct='%1.1f%%', startangle=140)
-    plt.title("Category-wise Expenses")
-    plt.ylabel("")
-    plt.tight_layout()
-    plt.savefig("static/charts/pie.png")
-    plt.close()
+# ======================
+# Report Download (CSV)
+# ======================
+@app.route('/report')
+def report():
+    file_path = os.path.join(BASE_DIR, 'expense_report.csv')
 
-    # -------- BAR CHART (Monthly) --------
-    df["month"] = pd.to_datetime(df["expense_date"]).dt.to_period("M").astype(str)
-    monthly_sum = df.groupby("month")["amount"].sum()
-    plt.figure(figsize=(7, 4))
-    monthly_sum.plot(kind="bar")
-    plt.title("Monthly Expenses")
-    plt.xlabel("Month")
-    plt.ylabel("Amount")
-    plt.tight_layout()
-    plt.savefig("static/charts/bar.png")
-    plt.close()
+    expenses = Expense.query.all()
 
-    # -------- LINE CHART (Daily Trend) --------
-    daily_sum = df.groupby("expense_date")["amount"].sum()
-    plt.figure(figsize=(7, 4))
-    daily_sum.plot(marker="o")
-    plt.title("Spending Trend")
-    plt.xlabel("Date")
-    plt.ylabel("Amount")
-    plt.tight_layout()
-    plt.savefig("static/charts/line.png")
-    plt.close()
+    with open(file_path, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Date', 'Category', 'Note', 'Amount'])
+        for e in expenses:
+            writer.writerow([e.expense_date, e.category, e.note, e.amount])
 
+    return send_file(file_path, as_attachment=True)
 
-# ---------- DASHBOARD ----------
-@app.route("/")
-def dashboard():
-    generate_charts()
-
-    conn = get_db_connection()
-    expenses = conn.execute(
-        "SELECT * FROM expenses ORDER BY expense_date DESC"
-    ).fetchall()
-    conn.close()
-
-    total = sum(exp["amount"] for exp in expenses)
-
-    return render_template(
-        "dashboard.html",
-        expenses=expenses,
-        total=total
-    )
-
-
-# ---------- ADD EXPENSE ----------
-@app.route("/add", methods=["GET", "POST"])
-def add_expense():
-    if request.method == "POST":
-        amount = request.form["amount"]
-        category = request.form["category"]
-        note = request.form.get("note", "")
-        expense_date = request.form["date"]
-
-        conn = get_db_connection()
-        conn.execute(
-            "INSERT INTO expenses (amount, category, note, expense_date) VALUES (?, ?, ?, ?)",
-            (amount, category, note, expense_date)
-        )
-        conn.commit()
-        conn.close()
-
-        # ✅ FLASH MESSAGE ADDED HERE
-        flash("Expense added successfully!", "success")
-
-        return redirect(url_for("dashboard"))
-
-    return render_template("add_expense.html")
-
-
-# ---------- RUN APP ----------
-if __name__ == "__main__":
-    init_db()
+# ======================
+# Run App
+# ======================
+if __name__ == '__main__':
     app.run(debug=True)
