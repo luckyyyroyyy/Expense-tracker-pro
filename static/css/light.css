@@ -1,0 +1,17 @@
+body {
+    background: #f4f7fb;
+    color: #222;
+}
+
+.navbar {
+    background: #ffffff;
+}
+
+.card {
+    background: #ffffff;
+}
+
+.toggle-btn {
+    background: #222;
+    color: #fff;
+}
