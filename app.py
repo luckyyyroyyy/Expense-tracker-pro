@@ -52,16 +52,11 @@ def index():
 @app.route('/add', methods=['GET', 'POST'])
 def add_expense():
     if request.method == 'POST':
-        amount = request.form['amount']
-        category = request.form['category']
-        note = request.form['note']
-        date = request.form['date']
-
         new_expense = Expense(
-            amount=float(amount),
-            category=category,
-            note=note,
-            expense_date=datetime.strptime(date, '%Y-%m-%d')
+            amount=float(request.form['amount']),
+            category=request.form['category'],
+            note=request.form['note'],
+            expense_date=datetime.strptime(request.form['date'], '%Y-%m-%d')
         )
 
         db.session.add(new_expense)
@@ -92,7 +87,7 @@ def edit_expense(id):
     return render_template('edit_expense.html', expense=expense)
 
 # ======================
-# Delete Expense (POST ONLY)
+# Delete Expense
 # ======================
 @app.route('/delete/<int:id>', methods=['POST'])
 def delete_expense(id):
@@ -118,7 +113,6 @@ def generate_charts(expenses):
         month = e.expense_date.strftime('%b')
         monthly[month] = monthly.get(month, 0) + e.amount
 
-    # Pie Chart
     if categories:
         plt.figure()
         plt.pie(categories.values(), labels=categories.keys(), autopct='%1.1f%%')
@@ -126,7 +120,6 @@ def generate_charts(expenses):
         plt.savefig(os.path.join(chart_dir, 'pie.png'))
         plt.close()
 
-    # Bar Chart
     if monthly:
         plt.figure()
         plt.bar(monthly.keys(), monthly.values())
@@ -134,8 +127,6 @@ def generate_charts(expenses):
         plt.savefig(os.path.join(chart_dir, 'bar.png'))
         plt.close()
 
-    # Line Chart
-    if monthly:
         plt.figure()
         plt.plot(list(monthly.keys()), list(monthly.values()), marker='o')
         plt.title('Expense Trend')
@@ -143,19 +134,24 @@ def generate_charts(expenses):
         plt.close()
 
 # ======================
-# Report Download (CSV)
+# Report Download (CSV) ✅ FIXED
 # ======================
 @app.route('/report')
 def report():
     file_path = os.path.join(BASE_DIR, 'expense_report.csv')
-
     expenses = Expense.query.all()
 
-    with open(file_path, 'w', newline='') as f:
+    # 🔥 FIX IS HERE (UTF-8)
+    with open(file_path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['Date', 'Category', 'Note', 'Amount'])
         for e in expenses:
-            writer.writerow([e.expense_date, e.category, e.note, e.amount])
+            writer.writerow([
+                e.expense_date.strftime('%Y-%m-%d'),
+                e.category,
+                e.note,
+                e.amount
+            ])
 
     return send_file(file_path, as_attachment=True)
 
