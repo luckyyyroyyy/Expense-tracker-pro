@@ -1,17 +1,7 @@
-body {
-    background: #121212;
-    color: #f1f1f1;
-}
-
-.navbar {
-    background: #1f1f1f;
-}
-
-.card {
-    background: #1e1e1e;
-}
-
-.toggle-btn {
-    background: #f1f1f1;
-    color: #121212;
+:root {
+    --bg: #1e1e2f;
+    --text: #f1f1f1;
+    --nav: #2c2c3e;
+    --card: #2c2c3e;
+    --accent: #ff7b00;
 }

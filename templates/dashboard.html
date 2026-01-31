@@ -1,168 +1,58 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Expense Tracker Dashboard</title>
+{% extends 'base.html' %}
+{% block content %}
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+<div class="card fade-in">
+    <h2><i class="fa-solid fa-chart-line"></i> Expense Dashboard</h2>
+    <h3 style="margin-top:10px;">Total Spending: ₹ {{ total }}</h3>
+</div>
 
-    <style>
-        body {
-            background: linear-gradient(120deg, #1d2671, #c33764);
-            min-height: 100vh;
-            color: white;
-        }
+<!-- Charts -->
+<div class="card fade-in" style="margin-top:20px;">
+    <h3><i class="fa-solid fa-chart-pie"></i> Expense Analytics</h3>
 
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-            background: white;
-            color: black;
-        }
-
-        .chart-img {
-            border-radius: 10px;
-            padding: 10px;
-            background: white;
-        }
-
-        /* Animations */
-        .fade-up { animation: fadeUp 0.8s ease forwards; }
-        .zoom-in { animation: zoomIn 0.6s ease forwards; }
-
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-    </style>
-</head>
-
-<body>
-<div class="container py-4">
-
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 fade-up">
-        <h2>💸 Expense Tracker</h2>
-        <div>
-            <a href="/add" class="btn btn-warning fw-bold me-2">
-                <i class="bi bi-plus-circle"></i> Add Expense
-            </a>
-            <a href="/report" class="btn btn-info fw-bold">
-                <i class="bi bi-file-earmark-text"></i> Report
-            </a>
-        </div>
-    </div>
-
-    <!-- Total -->
-    <div class="card text-center mb-4 p-3 bg-success text-white fade-up">
-        <h4>Total Spending</h4>
-        <h2>₹ {{ total }}</h2>
-    </div>
-
-    <!-- Charts -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="card p-3 fade-up">
-                <h6 class="text-center">Category-wise</h6>
-                <img src="{{ url_for('static', filename='charts/pie.png') }}" class="img-fluid chart-img zoom-in">
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3 fade-up">
-                <h6 class="text-center">Monthly</h6>
-                <img src="{{ url_for('static', filename='charts/bar.png') }}" class="img-fluid chart-img zoom-in">
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card p-3 fade-up">
-                <h6 class="text-center">Trend</h6>
-                <img src="{{ url_for('static', filename='charts/line.png') }}" class="img-fluid chart-img zoom-in">
-            </div>
-        </div>
-    </div>
-
-    <!-- Table -->
-    <div class="card p-3 fade-up">
-        <h5 class="mb-3">Recent Expenses</h5>
-        <table class="table table-striped align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Note</th>
-                    <th>Amount (₹)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for e in expenses %}
-                <tr>
-                    <td>{{ e.expense_date }}</td>
-                    <td>{{ e.category }}</td>
-                    <td>{{ e.note }}</td>
-                    <td>{{ e.amount }}</td>
-                    <td>
-
-                        <!-- EDIT -->
-                        <a href="{{ url_for('edit_expense', id=e.id) }}"
-                           class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-
-                        <!-- DELETE (POST – NO REFRESH BUG) -->
-                        <form action="{{ url_for('delete_expense', id=e.id) }}"
-                              method="POST"
-                              style="display:inline;"
-                              onsubmit="return confirm('Delete this expense?');">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div style="display:flex; gap:30px; flex-wrap:wrap; justify-content:center; margin-top:20px;">
+        <img src="{{ url_for('static', filename='charts/pie.png') }}" width="280">
+        <img src="{{ url_for('static', filename='charts/hist.png') }}" width="280">
     </div>
 </div>
 
-<!-- TOASTS -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-        <div class="toast align-items-center text-bg-{{ category }} border-0 mb-2"
-             role="alert"
-             data-bs-delay="3000"
-             data-bs-autohide="true">
-            <div class="d-flex">
-                <div class="toast-body">{{ message }}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                        data-bs-dismiss="toast"></button>
-            </div>
-        </div>
+<!-- Table -->
+<div class="card fade-in" style="margin-top:20px;">
+    <h3><i class="fa-solid fa-table"></i> Recent Expenses</h3>
+
+    <table style="width:100%; margin-top:15px; border-collapse: collapse;">
+        <tr style="background:#ffd369; color:black;">
+            <th>Date</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th>Amount</th>
+            <th>Action</th>
+        </tr>
+
+        {% for e in expenses %}
+        <tr style="text-align:center; border-bottom:1px solid #eee;">
+            <td>{{ e.expense_date }}</td>
+            <td>{{ e.category }}</td>
+            <td>{{ e.note }}</td>
+            <td>₹ {{ e.amount }}</td>
+            <td style="display:flex; gap:8px; justify-content:center;">
+
+                <a href="{{ url_for('edit_expense', id=e.id) }}">
+                    <button style="background:#4ecca3;">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                </a>
+
+                <form action="{{ url_for('delete_expense', id=e.id) }}" method="POST">
+                    <button style="background:#ff4d4d;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </form>
+
+            </td>
+        </tr>
         {% endfor %}
-    {% endwith %}
+    </table>
 </div>
 
-<!-- Bootstrap JS (IMPORTANT – fixes stuck message issue) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    const toastElList = [].slice.call(document.querySelectorAll('.toast'))
-    toastElList.map(function (toastEl) {
-        return new bootstrap.Toast(toastEl).show()
-    })
-</script>
-
-</body>
-</html>
+{% endblock %}

@@ -1,24 +1,160 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}Expense Tracker Pro{% endblock %}</title>
+    <title>Expense Tracker Pro</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
-    <link id="light-theme" rel="stylesheet" href="{{ url_for('static', filename='css/light.css') }}">
-    <link id="dark-theme" rel="stylesheet" href="{{ url_for('static', filename='css/dark.css') }}" disabled>
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:'Poppins',sans-serif;
+        }
+
+        body{
+            background: linear-gradient(120deg,#1e3c72,#2a5298);
+            color:#fff;
+            min-height:100vh;
+        }
+
+        /* Navbar */
+        .navbar{
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            padding:15px 40px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+
+        .navbar a{
+            color:white;
+            text-decoration:none;
+            margin-left:20px;
+            font-weight:500;
+            transition:0.3s;
+        }
+
+        .navbar a:hover{
+            color:#ffd369;
+        }
+
+        /* Container */
+        .container{
+            padding:30px 60px;
+            animation:fadeIn 0.6s ease-in-out;
+        }
+
+        /* Cards */
+        .card{
+            background: rgba(255,255,255,0.08);
+            padding:20px;
+            border-radius:15px;
+            margin-bottom:25px;
+            box-shadow:0 8px 20px rgba(0,0,0,0.3);
+            backdrop-filter: blur(8px);
+            transition:0.3s;
+        }
+
+        .card:hover{
+            transform:translateY(-5px);
+        }
+
+        /* Table */
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:15px;
+        }
+
+        th,td{
+            padding:12px;
+            text-align:center;
+        }
+
+        th{
+            background:#ffd369;
+            color:#000;
+        }
+
+        tr:nth-child(even){
+            background:rgba(255,255,255,0.05);
+        }
+
+        /* Buttons */
+        button{
+            padding:6px 12px;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        button:hover{
+            transform:scale(1.05);
+        }
+
+        /* Flash Messages */
+        .flash{
+            padding:12px;
+            margin-bottom:20px;
+            border-radius:8px;
+            animation:slideDown 0.5s ease;
+        }
+
+        .success{ background:#28a745; }
+        .danger{ background:#dc3545; }
+        .info{ background:#17a2b8; }
+        .warning{ background:#ffc107; color:#000; }
+
+        @keyframes fadeIn{
+            from{opacity:0; transform:translateY(10px);}
+            to{opacity:1; transform:translateY(0);}
+        }
+
+        @keyframes slideDown{
+            from{opacity:0; transform:translateY(-20px);}
+            to{opacity:1; transform:translateY(0);}
+        }
+    </style>
 </head>
+
 <body>
 
-    <nav class="navbar">
-        <h2>💸 Expense Tracker Pro</h2>
-        <button class="toggle-btn" onclick="toggleTheme()">🌗 Toggle</button>
-    </nav>
+    <!-- Navbar -->
+    <div class="navbar">
+        <div>
+            <i class="fa-solid fa-wallet"></i> Expense Tracker
+        </div>
 
-    <div class="container">
-        {% block content %}{% endblock %}
+        <div>
+            <a href="/"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="/add"><i class="fa-solid fa-plus"></i> Add Expense</a>
+            <a href="/report"><i class="fa-solid fa-file-csv"></i> Report</a>
+            <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <div class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+
+    </div>
+
 </body>
 </html>
