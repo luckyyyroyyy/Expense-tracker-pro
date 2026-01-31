@@ -1,12 +1,12 @@
-from flask import send_file
-from flask_login import login_required, current_user
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from functools import wraps
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import os, csv
+import os
 
 app = Flask(__name__)
 app.secret_key = "secret_key"
@@ -93,9 +93,10 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    expenses = Expense.query.filter_by(user_id=session['user_id']).order_by(Expense.expense_date.desc()).all()
-    total = sum(e.amount for e in expenses)
+    expenses = Expense.query.filter_by(user_id=session['user_id']) \
+                .order_by(Expense.expense_date.desc()).all()
 
+    total = sum(e.amount for e in expenses)
     generate_charts(expenses)
 
     return render_template('dashboard.html', expenses=expenses, total=total)
@@ -155,14 +156,12 @@ def generate_charts(expenses):
         categories[e.category] = categories.get(e.category, 0) + e.amount
         amounts.append(e.amount)
 
-    # Pie
     if categories:
         plt.figure()
         plt.pie(categories.values(), labels=categories.keys(), autopct='%1.1f%%')
         plt.savefig(os.path.join(chart_dir, 'pie.png'))
         plt.close()
 
-    # Histogram
     if amounts:
         plt.figure()
         plt.hist(amounts, bins=5)
@@ -174,12 +173,12 @@ def generate_charts(expenses):
 @app.route('/report')
 @login_required
 def report():
-    expenses = Expense.query.filter_by(user_id=current_user.id).all()
+    expenses = Expense.query.filter_by(user_id=session['user_id']).all()
 
     with open('report.csv', 'w') as f:
         f.write('Category,Amount,Note,Date\n')
         for e in expenses:
-            f.write(f'{e.category},{e.amount},{e.note},{e.date}\n')
+            f.write(f'{e.category},{e.amount},{e.note},{e.expense_date}\n')
 
     return send_file('report.csv', as_attachment=True)
 
