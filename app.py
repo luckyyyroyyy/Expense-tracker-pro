@@ -131,6 +131,7 @@ def edit_expense(id):
         expense.note = request.form['note']
         expense.expense_date = datetime.strptime(request.form['date'], '%Y-%m-%d')
         db.session.commit()
+        flash("Expense updated successfully", "success")
         return redirect(url_for('index'))
 
     return render_template('edit_expense.html', expense=expense)
@@ -142,6 +143,7 @@ def delete_expense(id):
     expense = Expense.query.get_or_404(id)
     db.session.delete(expense)
     db.session.commit()
+    flash("Expense deleted successfully", "success")
     return redirect(url_for('index'))
 
 # ================= CHARTS =================
@@ -175,7 +177,7 @@ def generate_charts(expenses):
 def report():
     expenses = Expense.query.filter_by(user_id=session['user_id']).all()
 
-    with open('report.csv', 'w') as f:
+    with open('report.csv', 'w' ) as f:
         f.write('Category,Amount,Note,Date\n')
         for e in expenses:
             f.write(f'{e.category},{e.amount},{e.note},{e.expense_date}\n')

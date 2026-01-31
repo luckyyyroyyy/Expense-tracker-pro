@@ -127,6 +127,7 @@
 
 <body>
 
+    
     <!-- Navbar -->
     <div class="navbar">
         <div>
@@ -144,13 +145,13 @@
     <div class="container">
 
         <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+        {% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="toast">
+      {{ messages[0] }}
+    </div>
+  {% endif %}
+{% endwith %}
 
         {% block content %}{% endblock %}
 
