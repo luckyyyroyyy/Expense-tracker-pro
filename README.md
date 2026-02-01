@@ -95,17 +95,6 @@ http://127.0.0.1:5000
 
 ---
 
-## 📸 Screenshots
-
-(Add screenshots here)
-
-- Login Page
-- Dashboard with Charts
-- Add Expense Page
-- CSV Report
-
----
-
 ## 🎯 Purpose of Project
 
 This project is developed as a BCA Final Year Project to demonstrate:
